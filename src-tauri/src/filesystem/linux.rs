@@ -1,3 +1,6 @@
+use std::path::Path;
+use std::process::Command;
+
 fn find_saved_games_folder(dir: String) -> Result<String, &'static str> {
     let compatdata_subpath = "/compatdata/1134710/pfx/drive_c/users/steamuser/Saved Games/Weird and Wry";
 
@@ -19,7 +22,7 @@ fn find_saved_games_folder(dir: String) -> Result<String, &'static str> {
     //making an optimistic assumption that there will only be one dir left, should probably check actually
     let saved_games_folder: String = dirs.iter()
         .filter(|&dir| dir.contains(compatdata_subpath))
-        .last().unwrap().to_string();
+        .last().unwrap_or(&"".to_string()).to_string();
 
     Ok(saved_games_folder + "/NIMBY Rails")
 }
@@ -47,19 +50,19 @@ pub fn get_saved_games_folder() -> Result<String, &'static str> {
         format!("{home_dir}/.steam/steam/steamapps{compatdata_subpath}/NIMBY Rails")];
 
     default_dirs.iter().find_map(|dir| {
-        if Self::is_dir_empty(&dir).is_ok_and(|is_empty| !is_empty) {
+        if is_dir_empty(&dir).is_ok_and(|is_empty| !is_empty) {
             Some(dir)
         } else {
             None
         }
     });
 
-    let found_dir = match Self::find_saved_games_folder(home_dir) {
+    let found_dir = match find_saved_games_folder(home_dir) {
         Ok(dir) => dir,
         Err(_) => return Err("Cannot find Saved Games folder")
     };
 
-    if Self::is_dir_empty(&found_dir).is_ok_and(|is_empty| !is_empty) {
+    if is_dir_empty(&found_dir).is_ok_and(|is_empty| !is_empty) {
         return Ok(found_dir);
     }
 
