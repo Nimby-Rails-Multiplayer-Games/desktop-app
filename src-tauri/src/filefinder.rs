@@ -1,36 +1,79 @@
+use std::path::Path;
 use std::process::Command;
 
-trait FileFinder {
-    fn get_saved_games_folder() -> String;
+pub trait FileFinder {
+    fn get_saved_games_folder() -> Result<String, &'static str>;
+    fn check_dir_not_empty(dir: &str) -> Result<bool, &'static str>;
 }
 
-struct LinuxFileFinder {}
+pub struct LinuxFileFinder {}
 
-struct WindowsFileFinder {}
+impl LinuxFileFinder {
+    fn find_saved_games_folder(dir: String) -> Result<String, &'static str> {
+        let compatdata_subpath = "/compatdata/1134710/pfx/drive_c/users/steamuser/Saved Games/Weird and Wry";
 
-
-impl FileFinder for LinuxFileFinder {
-    fn get_saved_games_folder() -> String {
-        let output = Command::new("find")
-            .arg("~")
-            .arg("-type d")
-            .arg("-name \"Weird and Wry\"")
+        let output = match Command::new("find")
+            .arg(dir)
+            .arg("-type").arg("d")
+            .arg("-name").arg("Weird and Wry")
             .arg("-print0")
-            .output()
-            .expect("failed to find");
-
-        let lines = output.stdout
-            .split(|&b| b == b'\n')
-            .map(|line| line.unwrap_or(line));
-
-        let clean_lines = lines
-            .for_each(|line| -> String { String::from_utf8(line) });
-
-        let s = match String::from_utf8(output.stdout) {
-            Ok(v) => v,
-            Err(e) => panic!("Invalid UTF-8 sequence: {}", e)
+            .output() {
+            Ok(output) => output,
+            Err(_) => return Err("failed to find")
         };
 
-        return "TODO".to_string();
+        let dirs: Vec<String> = output.stdout
+            .split(|&b| b == b'\0')
+            .map(|line_slice| String::from_utf8_lossy(line_slice).into_owned())
+            .collect();
+
+        //making an optimistic assumption that there will only be one dir left, should probably check actually
+        let saved_games_folder: String = dirs.iter()
+            .filter(|&dir| dir.contains(compatdata_subpath))
+            .last().unwrap().to_string();
+
+        Ok(saved_games_folder + "/NIMBY Rails")
+    }
+}
+
+impl FileFinder for LinuxFileFinder {
+    fn get_saved_games_folder() -> Result<String, &'static str> {
+        let home_dir = match std::env::var("HOME") {
+            Ok(dir) => dir,
+            Err(_) => return Err("Cannot find home directory")
+        };
+        let compatdata_subpath = "/compatdata/1134710/pfx/drive_c/users/steamuser/Saved Games/Weird and Wry";
+        let default_dirs = [
+            format!("{home_dir}/.steam/debian-installation/steamapps{compatdata_subpath}/NIMBY Rails"),
+            format!("{home_dir}/.steam/steam/steamapps{compatdata_subpath}/NIMBY Rails")];
+
+        default_dirs.iter().for_each(|dir| {
+            if Self::check_dir_not_empty(&dir).is_ok_and(|is_empty| is_empty) {
+                return Ok(dir);
+            }
+        });
+
+        let found_dir = match Self::find_saved_games_folder(home_dir) {
+            Ok(dir) => dir,
+            Err(_) => return Err("Cannot find Saved Games folder")
+        };
+
+        if Self::check_dir_not_empty(&found_dir).is_ok_and(|is_empty| is_empty) {
+            return Ok(found_dir);
+        }
+
+        return Err("Cannot get Saved Games folder");
+    }
+
+    fn check_dir_not_empty(dir: &str) -> Result<bool, &'static str> {
+        let path = Path::new(dir);
+        if path.exists() {
+            let read_dir = match path.read_dir() {
+                Ok(entries) => entries,
+                Err(_) => return Err("Cannot read default Path")
+            };
+            return Ok(read_dir.count() > 0);
+        }
+        return Err("Path does not exists");
     }
 }
