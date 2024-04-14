@@ -47,9 +47,11 @@ impl FileFinder for LinuxFileFinder {
             format!("{home_dir}/.steam/debian-installation/steamapps{compatdata_subpath}/NIMBY Rails"),
             format!("{home_dir}/.steam/steam/steamapps{compatdata_subpath}/NIMBY Rails")];
 
-        default_dirs.iter().for_each(|dir| {
-            if Self::check_dir_not_empty(&dir).is_ok_and(|is_empty| is_empty) {
-                return Ok(dir);
+        default_dirs.iter().find_map(|dir| {
+            if Self::check_dir_not_empty(&dir).is_ok_and(|is_not_empty| is_not_empty) {
+                Some(dir)
+            } else {
+                None
             }
         });
 
