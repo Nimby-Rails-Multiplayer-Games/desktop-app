@@ -19,12 +19,17 @@ fn find_saved_games_folder(dir: String) -> Result<String, &'static str> {
         .map(|line_slice| String::from_utf8_lossy(line_slice).into_owned())
         .collect();
 
-    //making an optimistic assumption that there will only be one dir left, should probably check actually
-    let saved_games_folder: String = dirs.iter()
-        .filter(|&dir| dir.contains(compatdata_subpath))
-        .last().unwrap_or(&"".to_string()).to_string();
-
-    Ok(saved_games_folder + "/NIMBY Rails")
+    let compatdata_finds = dirs.iter()
+        .filter(|&dir| dir.contains(compatdata_subpath));
+    let compatdata_count = compatdata_finds.clone().count();
+    if compatdata_count == 1 {
+        Ok(compatdata_finds.last().unwrap_or(&"".to_string()).to_string() + "/NIMBY Rails")
+    } else if compatdata_count > 1 {
+        //TODO: Couple to UI to allow selection of correct folder
+        Err("Too many Saved Games folders found")
+    } else {
+        Err("No Saved Games folder found")
+    }
 }
 
 fn is_dir_empty(dir: &str) -> Result<bool, &'static str> {
@@ -62,8 +67,12 @@ pub fn get_saved_games_folder() -> Result<String, &'static str> {
         Err(_) => return Err("Cannot find Saved Games folder")
     };
 
-    if is_dir_empty(&found_dir).is_ok_and(|is_empty| !is_empty) {
+    let is_empty = is_dir_empty(&found_dir).is_ok_and(|is_empty| !is_empty);
+    if !is_empty {
         return Ok(found_dir);
+    } else if is_empty {
+        //TODO: Couple to UI to allow confirmation of correct folder
+        return Err("Saved Games folder empty");
     }
 
     return Err("Cannot get Saved Games folder");
