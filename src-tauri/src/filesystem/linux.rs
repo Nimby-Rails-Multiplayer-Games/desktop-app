@@ -54,20 +54,28 @@ pub fn get_saved_games_folder() -> Result<String, &'static str> {
         format!("{home_dir}/.steam/debian-installation/steamapps{compatdata_subpath}/NIMBY Rails"),
         format!("{home_dir}/.steam/steam/steamapps{compatdata_subpath}/NIMBY Rails")];
 
-    default_dirs.iter().find_map(|dir| {
-        if is_dir_empty(&dir).is_ok_and(|is_empty| !is_empty) {
-            Some(dir)
-        } else {
-            None
-        }
-    });
+    let empty_string = "".to_string();
+    let default_dir = default_dirs.iter()
+        .find_map(|dir| {
+            if is_dir_empty(&dir).is_ok_and(|is_empty| !is_empty) {
+                Some(dir)
+            } else {
+                None
+            }
+        })
+        .unwrap_or(&empty_string);
+
+    if !default_dir.is_empty() {
+        return Ok(default_dir.to_string());
+    }
+
 
     let found_dir = match find_saved_games_folder(home_dir) {
         Ok(dir) => dir,
         Err(_) => return Err("Cannot find Saved Games folder")
     };
 
-    let is_empty = is_dir_empty(&found_dir).is_ok_and(|is_empty| !is_empty);
+    let is_empty = is_dir_empty(&found_dir).is_ok_and(|is_empty| is_empty);
     if !is_empty {
         return Ok(found_dir);
     } else if is_empty {
