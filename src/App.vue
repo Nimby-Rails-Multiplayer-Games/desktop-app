@@ -1,7 +1,13 @@
 <script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
+import { invoke } from '@tauri-apps/api/tauri';
+import { ref } from 'vue';
 import Greet from "./components/Greet.vue";
+
+const savedGamesFolder = ref('');
+invoke('filesystem_get_saved_games_folder').then((result: any) => {
+  console.log(result);
+  savedGamesFolder.value = result;
+})
 </script>
 
 <template>
@@ -21,7 +27,7 @@ import Greet from "./components/Greet.vue";
     </div>
 
     <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
-
+    <span>{{ savedGamesFolder }}</span>
     <p>
       Recommended IDE setup:
       <a href="https://code.visualstudio.com/" target="_blank">VS Code</a>
