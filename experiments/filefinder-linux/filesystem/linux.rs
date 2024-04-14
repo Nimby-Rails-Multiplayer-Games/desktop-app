@@ -4,8 +4,7 @@ pub fn get_saved_games_folder() -> Result<String, &'static str> {
         Err(_) => return Err("Cannot find home directory")
     };
 
-    println!("{}", home_dir);
-    let output = match Command::new("find")
+    let output = match std::process::Command::new("find")
         .arg(home_dir)
         .arg("-type").arg("d")
         .arg("-name").arg("Weird and Wry")
@@ -14,8 +13,6 @@ pub fn get_saved_games_folder() -> Result<String, &'static str> {
         Ok(output) => output,
         Err(_) => return Err("failed to find")
     };
-
-    println!("{:?}", output);
 
     let lines: Vec<String> = output.stdout
         .split(|&b| b == b'\0')
